@@ -1,4 +1,5 @@
 *.o
 *.nc
 BOUT.log.*
-
+slab3d/
+hermes-2
