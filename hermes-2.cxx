@@ -247,7 +247,7 @@ int Hermes::init(bool restarting) {
 
   ramp_j_diamag = optsc["ramp_j_diamag"]
                   .doc("ramps up current drive for for j_diamag terms in vorticity eq")
-                  .withDefault(1.0)
+                  .withDefault(1.0);
   
   j_diamag = optsc["j_diamag"]
                  .doc("Diamagnetic current: Vort <-> Pe")
@@ -848,6 +848,7 @@ int Hermes::init(bool restarting) {
   Dn = 0.0;
 
   SAVE_REPEAT(Telim, Tilim);
+  SAVE_REPEAT(ramp_j_diamag);
 
   if (verbose) {
     // Save additional fields
@@ -893,8 +894,10 @@ int Hermes::rhs(BoutReal t) {
     sheath_model = 0;
   }
 
-  ramp_j_diamag = ramp_j_diamag_generator->generate(t, 0, 0, 0);
-
+  if (ramp_j_diamag != 1.0) {
+    ramp_j_diamag = ramp_j_diamag_generator->generate(t, 0, 0, 0);
+  }
+  
   // Communicate evolving variables
   // Note: Parallel slices are not calculated because parallel derivatives
   // are calculated using field aligned quantities
