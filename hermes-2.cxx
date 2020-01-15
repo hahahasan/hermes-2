@@ -245,6 +245,10 @@ int Hermes::init(bool restarting) {
                      .doc("Include electron inertia in Ohm's law?")
                      .withDefault<bool>(true);
 
+  ramp_j_diamag = optsc["ramp_j_diamag"]
+                  .doc("ramps up current drive for for j_diamag terms in vorticity eq")
+                  .withDefault(1.0)
+  
   j_diamag = optsc["j_diamag"]
                  .doc("Diamagnetic current: Vort <-> Pe")
                  .withDefault<bool>(true);
@@ -360,6 +364,10 @@ int Hermes::init(bool restarting) {
   if (sol_fix_profiles) {
     sol_ne = FieldFactory::get()->parse("sol_ne", &optsc);
     sol_te = FieldFactory::get()->parse("sol_te", &optsc);
+  }
+
+  if (ramp_j_diamag != 1.0) {
+    ramp_j_diamag_generator = FieldFactory::get()->parse("hermes:ramp_j_diamag", Options::getRoot());
   }
 
   OPTION(optsc, radial_buffers, false);
@@ -894,7 +902,6 @@ int Hermes::init(bool restarting) {
 
 int Hermes::rhs(BoutReal t) {
   Coordinates *coord = mesh->getCoordinates();
-  
   if (!evolve_plasma) {
     Ne = 0.0;
     Pe = 0.0;
@@ -904,6 +911,8 @@ int Hermes::rhs(BoutReal t) {
     NVi = 0.0;
     sheath_model = 0;
   }
+
+  ramp_j_diamag = ramp_j_diamag_generator->generate(t, 0, 0, 0);
 
   // Communicate evolving variables
   // Note: Parallel slices are not calculated because parallel derivatives
@@ -2412,7 +2421,8 @@ int Hermes::rhs(BoutReal t) {
 
       // Note: This term is central differencing so that it balances
       // the corresponding compression term in the pressure equation
-      ddt(Vort) += Div((Pi + Pe) * Curlb_B);
+      
+      ddt(Vort) += ramp_j_diamag * Div((Pi + Pe) * Curlb_B);
     }
 
     // Advection of vorticity by ExB
@@ -2711,11 +2721,11 @@ int Hermes::rhs(BoutReal t) {
 
   if (j_diamag) { // Diamagnetic flow
     // Magnetic drift (curvature) divergence.
-    ddt(Pe) -= (5. / 3) * FV::Div_f_v(Pe, -Telim * Curlb_B, pe_bndry_flux);
+    ddt(Pe) -= ramp_j_diamag * (5. / 3) * FV::Div_f_v(Pe, -Telim * Curlb_B, pe_bndry_flux);
 
     // This term energetically balances diamagnetic term
     // in the vorticity equation
-    ddt(Pe) -= (2. / 3) * Pe * (Curlb_B * Grad(phi));
+    ddt(Pe) -= ramp_j_diamag * (2. / 3) * Pe * (Curlb_B * Grad(phi));
   }
 
   // Parallel heat conduction
@@ -2967,14 +2977,14 @@ int Hermes::rhs(BoutReal t) {
 
   if (j_diamag) { // Diamagnetic flow
     // Magnetic drift (curvature) divergence
-    ddt(Pi) -= (5. / 3) * FV::Div_f_v(Pi, Tilim * Curlb_B, pe_bndry_flux);
+    ddt(Pi) -= ramp_j_diamag * (5. / 3) * FV::Div_f_v(Pi, Tilim * Curlb_B, pe_bndry_flux);
 
     // Compression of ExB flow
     // These terms energetically balances diamagnetic term
     // in the vorticity equation
-    ddt(Pi) -= (2. / 3) * Pi * (Curlb_B * Grad(phi));
+    ddt(Pi) -= ramp_j_diamag * (2. / 3) * Pi * (Curlb_B * Grad(phi));
 
-    ddt(Pi) += Pi * Div((Pe + Pi) * Curlb_B);
+    ddt(Pi) += ramp_j_diamag * Pi * Div((Pe + Pi) * Curlb_B);
   }
 
   if (j_par) {
