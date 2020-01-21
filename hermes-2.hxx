@@ -100,6 +100,8 @@ private:
   bool electromagnetic; // Include magnetic potential psi
   bool FiniteElMass;    // Finite Electron Mass
 
+  BoutReal TIMESTEP;
+  BoutReal NOUT;
   BoutReal ramp_j_diamag; // coefficient to ramp up the drive for current terms in vorticity equation
   FieldGeneratorPtr  ramp_j_diamag_generator;
   bool j_diamag;    // Diamagnetic current: Vort <-> Pe
