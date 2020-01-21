@@ -246,8 +246,12 @@ int Hermes::init(bool restarting) {
                      .withDefault<bool>(true);
 
   ramp_j_diamag = optsc["ramp_j_diamag"]
-                  .doc("ramps up current drive for for j_diamag terms in vorticity eq")
-                  .withDefault(1.0);
+                      .doc("ramps up current drive for j_diamag term in vorticity eq")
+                      .withDefault(1.0);
+
+  // Options::root()["mesh"]["paralleltransform"].as<std::string>()
+  // TIMESTEP =  Options::root()["TIMESTEP"].as<BoutReal>() * 1e-6;
+  NOUT =  Options::root()["NOUT"].as<BoutReal>();
   
   j_diamag = optsc["j_diamag"]
                  .doc("Diamagnetic current: Vort <-> Pe")
@@ -366,7 +370,7 @@ int Hermes::init(bool restarting) {
     sol_te = FieldFactory::get()->parse("sol_te", &optsc);
   }
 
-  if (ramp_j_diamag != 1.0) {
+  if (ramp_j_diamag < 1.0) {
     ramp_j_diamag_generator = FieldFactory::get()->parse("hermes:ramp_j_diamag", Options::getRoot());
   }
 
@@ -894,8 +898,8 @@ int Hermes::rhs(BoutReal t) {
     sheath_model = 0;
   }
 
-  if (ramp_j_diamag != 1.0) {
-    ramp_j_diamag = ramp_j_diamag_generator->generate(t, 0, 0, 0);
+  if (ramp_j_diamag < 1.0) {
+    ramp_j_diamag = ramp_j_diamag_generator->generate(0, 0, 0, 2 * t/NOUT);
   }
   
   // Communicate evolving variables
@@ -1550,6 +1554,7 @@ int Hermes::rhs(BoutReal t) {
 
           Pi(r.ind, jy, jz) = Ne(r.ind, jy, jz) * Ti(r.ind, jy, jz);
           Pilim(r.ind, jy, jz) = Nelim(r.ind, jy, jz) * Tilim(r.ind, jy, jz);
+	  phi(r.ind, jy, jz) = phi(r.ind, mesh->ystart, jz);
 
           // No flows
           Vi(r.ind, jy, jz) = -Vi(r.ind, mesh->ystart, jz);
