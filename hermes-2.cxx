@@ -1573,6 +1573,7 @@ int Hermes::rhs(BoutReal t) {
 
           Pi(r.ind, jy, jz) = Ne(r.ind, jy, jz) * Ti(r.ind, jy, jz);
           Pilim(r.ind, jy, jz) = Nelim(r.ind, jy, jz) * Tilim(r.ind, jy, jz);
+
 	  phi(r.ind, jy, jz) = phi(r.ind, mesh->ystart, jz);
 
           // No flows
