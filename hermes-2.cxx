@@ -899,7 +899,7 @@ int Hermes::rhs(BoutReal t) {
   }
 
   if (ramp_j_diamag < 1.0) {
-    ramp_j_diamag = ramp_j_diamag_generator->generate(0, 0, 0, 2 * t/NOUT);
+    ramp_j_diamag = ramp_j_diamag_generator->generate(0, 0, 0, 20 * t/NOUT);
   }
   
   // Communicate evolving variables
