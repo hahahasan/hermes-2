@@ -490,6 +490,7 @@ int Hermes::init(bool restarting) {
         for (int y = mesh->ystart; y <= mesh->yend; y++) {
           Sn(x, y) = 0.0;
           Spe(x, y) = 0.0;
+	  Spi(x, y) = 0.0;
         }
       }
     }
