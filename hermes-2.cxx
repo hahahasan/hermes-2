@@ -1782,8 +1782,8 @@ int Hermes::rhs(BoutReal t) {
           // Zero-gradient density
           BoutReal nesheath = 0.5 * (3. * Ne(r.ind, mesh->yend, jz) -
                                      Ne(r.ind, mesh->yend - 1, jz));
-          if (nesheath < 0.0)
-            nesheath = 0.0;
+          if (nesheath < 1e-5)
+            nesheath = 1e-5;
 
           // Temperature at the sheath entrance
           BoutReal tesheath = floor(Te(r.ind, mesh->yend, jz), 0.0);
@@ -1884,6 +1884,70 @@ int Hermes::rhs(BoutReal t) {
             Vi(r.ind, jy, jz) = 2. * visheath - Vi(r.ind, mesh->yend, jz);
             Ve(r.ind, jy, jz) = 2. * vesheath - Ve(r.ind, mesh->yend, jz);
             Jpar(r.ind, jy, jz) = -Jpar(r.ind, mesh->yend, jz);
+            NVi(r.ind, jy, jz) =
+                2. * nesheath * visheath - NVi(r.ind, mesh->yend, jz);
+          }
+        }
+      }
+      break;
+    }
+    case 4: {
+      // Bohm sheath, with free boundary on the density and pressure
+      // The extrapolation is done using ratios i.e. linear in log(Ne) and log(P)
+      for (RangeIterator r = mesh->iterateBndryUpperY(); !r.isDone(); r++) {
+        for (int jz = 0; jz < mesh->LocalNz; jz++) {
+          // Free boundary, linear extrapolation of logarithms
+          for (int jy = mesh->yend + 1; jy < mesh->LocalNy; jy++) {
+            Ne(r.ind, jy, jz) = SQ(Ne(r.ind, mesh->yend, jz)) / Ne(r.ind, mesh->yend - 1, jz);
+            Pe(r.ind, jy, jz) = SQ(Pe(r.ind, mesh->yend, jz)) / Pe(r.ind, mesh->yend - 1, jz);
+            Pi(r.ind, jy, jz) = SQ(Pi(r.ind, mesh->yend, jz)) / Pi(r.ind, mesh->yend - 1, jz);
+          }
+          
+          // Zero-gradient density
+          BoutReal nesheath = 0.5 * (Ne(r.ind, mesh->yend, jz) +
+                                     Ne(r.ind, mesh->yend + 1, jz));
+          BoutReal tesheath = 0.5 * (Te(r.ind, mesh->yend, jz) +
+                                     Pe(r.ind, mesh->yend+1, jz) / Ne(r.ind, mesh->yend+1, jz));
+          BoutReal tisheath = 0.5 * (Ti(r.ind, mesh->yend, jz) +
+                                     Pi(r.ind, mesh->yend+1, jz) / Ne(r.ind, mesh->yend+1, jz));
+
+          // Zero-gradient potential
+          BoutReal phisheath = phi(r.ind, mesh->yend, jz);
+
+          // Ion velocity goes to the sound speed
+          BoutReal visheath = sqrt(tesheath + tisheath); // Sound speed outwards
+
+          if (Vi(r.ind, mesh->yend, jz) > visheath) {
+            // If plasma is faster, go to plasma velocity
+            visheath = Vi(r.ind, mesh->yend, jz);
+          }
+
+          // Sheath current
+          BoutReal phi_te = floor(phisheath / tesheath, 0.0);
+          BoutReal vesheath =
+              sqrt(tesheath) * (sqrt(mi_me) / (2. * sqrt(PI))) * exp(-phi_te);
+          // J = n*(Vi - Ve)
+          BoutReal jsheath = nesheath * (visheath - vesheath);
+          if (nesheath < 1e-10) {
+            vesheath = visheath;
+            jsheath = 0.0;
+          }
+
+          // Apply boundary condition half-way between cells
+          for (int jy = mesh->yend + 1; jy < mesh->LocalNy; jy++) {
+            // Neumann conditions
+            phi(r.ind, jy, jz) = phisheath;
+            Vort(r.ind, jy, jz) = Vort(r.ind, mesh->yend, jz);
+
+            // Here zero-gradient Te, heat flux applied later
+            // This is so that heat diffusion doesn't remove (or add) additional heat
+            Te(r.ind, jy, jz) = tesheath;
+            Ti(r.ind, jy, jz) = Ti(r.ind, mesh->yend, jz);
+
+            // Dirichlet conditions to set flows
+            Vi(r.ind, jy, jz) = 2. * visheath - Vi(r.ind, mesh->yend, jz);
+            Ve(r.ind, jy, jz) = 2. * vesheath - Ve(r.ind, mesh->yend, jz);
+            Jpar(r.ind, jy, jz) = 2. * jsheath - Jpar(r.ind, mesh->yend, jz);
             NVi(r.ind, jy, jz) =
                 2. * nesheath * visheath - NVi(r.ind, mesh->yend, jz);
           }
