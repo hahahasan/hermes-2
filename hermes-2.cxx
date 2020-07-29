@@ -325,6 +325,7 @@ int Hermes::init(bool restarting) {
   OPTION(optsc, anomalous_D, -1);
   OPTION(optsc, anomalous_chi, -1);
   OPTION(optsc, anomalous_nu, -1);
+  OPTION(optsc, anomalous_nu_nDC, -1);
   OPTION(optsc, anomalous_D_nvi, true);
   OPTION(optsc, anomalous_D_pepi, true);
 
@@ -438,6 +439,12 @@ int Hermes::init(bool restarting) {
     // Normalise
     anomalous_nu /= rho_s0 * rho_s0 * Omega_ci; // m^2/s
     output.write("\tnormalised anomalous nu_perp = %e\n", anomalous_nu);
+  }
+
+  if (anomalous_nu_nDC > 0.0) {
+    //Normalise
+    anomalous_nu_nDC /= rho_s0 * rho_s0 * Omega_ci; //m^2/s
+    output.write("\tnormalised anomalous nu_perp_nDC = %e\n", anomalous_nu_nDC);
   }
 
   if (ramp_mesh) {
@@ -2547,6 +2554,12 @@ int Hermes::rhs(BoutReal t) {
       // Perpendicular anomalous momentum diffusion
       ddt(Vort) += FV::Div_a_Laplace_perp(anomalous_nu, DC(Vort));
     }
+
+    if (anomalous_nu_nDC > 0.0) {
+      TRACE("Vort:anomalous_nu_nDC");
+      // Perpendicular anomalous momentum diffusion - non-DC components
+      ddt(Vort) += FV::Div_a_Laplace_perp(anomalous_nu_nDC, Vort);
+    }
     
     if (ion_neutral_rate > 0.0) {
       // Sink of vorticity due to ion-neutral friction
@@ -2755,6 +2768,10 @@ int Hermes::rhs(BoutReal t) {
     
     if (anomalous_nu > 0.0) {
       ddt(NVi) += FV::Div_a_Laplace_perp(DC(Ne) * anomalous_nu, DC(Vi));
+    }
+
+    if (anomalous_nu_nDC > 0.0) {
+      ddt(NVi) += FV::Div_a_Laplace_perp(Ne * anomalous_nu_nDC, Vi);
     }
     
     if (hyperpar > 0.0) {
