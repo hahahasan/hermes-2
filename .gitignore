@@ -3,3 +3,5 @@
 BOUT.log.*
 slab3d/
 hermes-2
+atomicpp.a
+BOUT_commit
