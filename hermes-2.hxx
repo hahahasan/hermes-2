@@ -48,6 +48,10 @@ private:
   // Equilibrium current
   Field2D Jpar0;
 
+  // Diagnosing sim variables
+  Field2D NeErr;
+  Field2D NeErr_inp;
+  
   // Evolving variables
   Field3D Ne;         // Electron density
   Field3D Pe, Pi;     // Electron and Ion pressures
@@ -100,6 +104,7 @@ private:
   bool electromagnetic; // Include magnetic potential psi
   bool FiniteElMass;    // Finite Electron Mass
 
+  
   BoutReal TIMESTEP;
   BoutReal NOUT;
   BoutReal ramp_j_diamag; // coefficient to ramp up the drive for current terms in vorticity equation
@@ -172,6 +177,7 @@ private:
   // Output switches for additional information
   bool verbose;    // Outputs additional fields, mainly for debugging
   bool output_ddt; // Output time derivatives
+  bool diagnostic; // turn diagnostic flag to true if wanting to output extra information
   
   // Numerical dissipation
 

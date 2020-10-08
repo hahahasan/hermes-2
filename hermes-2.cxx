@@ -391,6 +391,7 @@ int Hermes::init(bool restarting) {
   // Output additional information
   OPTION(optsc, verbose, false);    // Save additional fields
   OPTION(optsc, output_ddt, false); // Save time derivatives
+  OPTION(optsc, diagnostic, false);
 
   // Normalisation
   OPTION(optsc, Tnorm, 100);  // Reference temperature [eV]
@@ -512,6 +513,12 @@ int Hermes::init(bool restarting) {
   qmid /= qe * Tnorm * Nnorm * Omega_ci;
   Spe += (2. / 3) * qmid;
 
+  // diagnosing save_repeats - change these depending on which part is malfunctioning
+  if (diagnostic) {
+    SAVE_REPEAT(NeErr);
+    SAVE_REPEAT(NeErr_inp);
+    SAVE_REPEAT(ddt(Sn));
+  }
   // Add variables to solver
   SOLVE_FOR(Ne, Pe, Pi);
   EvolvingVars.add(Ne, Pe, Pi);
@@ -583,7 +590,9 @@ int Hermes::init(bool restarting) {
   
   OPTION(optsc, adapt_source_n, false);
   if (adapt_source_n) {
-    // Adaptive density sources to match profiles 
+    // Adaptive density sources to match profile
+    OPTION(optsc, source_p, 1e-2);
+    OPTION(optsc, source_i, 1e-6);
     Field2D Snsave = copy(Sn);
     SOLVE_FOR(Sn);
     Sn = Snsave;
@@ -1095,7 +1104,8 @@ int Hermes::rhs(BoutReal t) {
           } else {
             // Use older Laplacian solver
             // phiSolver->setCoefC(1./SQ(coord->Bxy)); // Set when initialised
-            phi = phiSolver->solve(Vort * SQ(coord->Bxy), (sheathmult + log(sqrt(Telim / (Telim + Tilim)))) * Telim );
+            // phi = phiSolver->solve(Vort * SQ(coord->Bxy), (sheathmult + log(sqrt(Telim / (Telim + Tilim)))) * Telim );
+            phi = phiSolver->solve(Vort * SQ(coord->Bxy), DC((sheathmult + log(sqrt(Telim / (Telim + Tilim)))) * Telim ));
           }
         }
         
@@ -2496,7 +2506,8 @@ int Hermes::rhs(BoutReal t) {
   // Source
   if (adapt_source_n) {
     // Add source. Ensure that sink will go to zero as Ne -> 0
-    Field2D NeErr = averageY(DC(Ne) - NeTarget);
+    NeErr_inp = DC(Ne) - NeTarget;
+    NeErr = averageY(NeErr_inp);
 
     if (core_sources) {
       // Sources only in core (periodic Y) domain
@@ -2505,12 +2516,16 @@ int Hermes::rhs(BoutReal t) {
       ddt(Sn) = 0.0;
       for (int x = mesh->xstart; x <= mesh->xend; x++) {
         if (!mesh->periodicY(x))
+	        // puts ("#11111 non periodic Y");
           continue; // Not periodic, so skip
 
         for (int y = mesh->ystart; y <= mesh->yend; y++) {
           Sn(x, y) -= source_p * NeErr(x, y);
           ddt(Sn)(x, y) = -source_i * NeErr(x, y);
-
+          if (diagnostic) {
+            output.write("Normalisation Sn=%e, ddt(Sn)=%e\n", Sn(x,y), ddt(Sn)(x,y));
+	          output.write("Normalisation NeTarget=%e, NeErr_inp=%e, NeErr=%e\n", NeTarget(x,y), NeErr_inp(x,y), NeErr(x,y));
+          }
           if (Sn(x, y) < 0.0) {
             Sn(x, y) = 0.0;
             if (ddt(Sn)(x, y) < 0.0)
