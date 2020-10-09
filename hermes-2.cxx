@@ -1461,8 +1461,8 @@ int Hermes::rhs(BoutReal t) {
           // Zero-gradient density
           BoutReal nesheath = 0.5 * (3. * Ne(r.ind, mesh->ystart, jz) -
                                      Ne(r.ind, mesh->ystart + 1, jz));
-          if (nesheath < 0.0)
-            nesheath = 0.0;
+          if (nesheath < 1e-5)
+            nesheath = 1e-5;
 
           // Temperature at the sheath entrance
           BoutReal tesheath = floor(Te(r.ind, mesh->ystart, jz), 0.0);
