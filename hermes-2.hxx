@@ -148,6 +148,7 @@ private:
   bool sheath_closure; // Sheath closure sink on vorticity (if sinks = true)
   bool drift_wave;     // Drift-wave closure (if sinks=true)
 
+  bool slab_radial_buffers; // Radial buffer regions for slab geometry sims
   bool radial_buffers; // Radial buffer regions
   int radial_inner_width; // Number of points in the inner radial buffer
   int radial_outer_width; // Number of points in the outer radial buffer
