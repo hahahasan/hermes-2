@@ -491,6 +491,36 @@ int Hermes::init(bool restarting) {
   PiSource /= Omega_ci;
   Spi = DC(PiSource);
 
+  if (slab_radial_buffers || radial_buffers) {
+    // Need to set the sources in the radial buffer regions to zero
+
+    if ((mesh->getGlobalXIndex(mesh->xstart) - mesh->xstart) < radial_inner_width) {
+
+      int imax = mesh->xstart + radial_inner_width - 1 - 
+                 (mesh->getGlobalXIndex(mesh->xstart) - mesh->xstart);
+      if (imax > mesh->xend) {
+        imax = mesh->xend;
+      }
+      
+      int imin = mesh->xstart;
+      if (!mesh->firstX()) {
+        --imin;
+      }
+
+      int ncz = mesh->LocalNz; 
+
+      for (int i = imin; i <= imax; i++) {
+        for (int j = mesh->ystart; j <= mesh->yend; ++j) {
+          for (int k = 0; k < ncz; ++k) {
+            NeSource(i, j, k) = 0;
+            PiSource(i, j, k) = 0;
+            PeSource(i, j ,k) = 0;
+          }
+        }
+      }
+    }
+  }
+
   OPTION(optsc, core_sources, false);
   if (core_sources) {
     for (int x = mesh->xstart; x <= mesh->xend; x++) {
