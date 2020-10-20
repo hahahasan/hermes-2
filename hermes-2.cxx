@@ -363,6 +363,7 @@ int Hermes::init(bool restarting) {
   OPTION(optsc, sheath_yup, true);       // Apply sheath at yup?
   OPTION(optsc, sheath_ydown, true);     // Apply sheath at ydown?
   OPTION(optsc, test_boundaries, false); // Test boundary conditions
+  OPTION(optsc, nesheath_floor, 1e-5);   // Ne sheath lower limit
 
   // Fix profiles in SOL
   OPTION(optsc, sol_fix_profiles, false);
@@ -1297,7 +1298,7 @@ int Hermes::rhs(BoutReal t) {
       for (RangeIterator r = mesh->iterateBndryLowerY(); !r.isDone(); r++) {
         for (int jz = 0; jz < mesh->LocalNz; jz++) {
           // Zero-gradient density
-          BoutReal nesheath = floor(Ne(r.ind, mesh->ystart, jz), 0.0);
+          BoutReal nesheath = floor(Ne(r.ind, mesh->ystart, jz), nesheath_floor);
 
           // Temperature at the sheath entrance
           BoutReal tesheath = floor(Te(r.ind, mesh->ystart, jz), 0.0);
@@ -1710,7 +1711,7 @@ int Hermes::rhs(BoutReal t) {
       for (RangeIterator r = mesh->iterateBndryUpperY(); !r.isDone(); r++) {
         for (int jz = 0; jz < mesh->LocalNz; jz++) {
           // Zero-gradient density
-          BoutReal nesheath = floor(Ne(r.ind, mesh->yend, jz), 0.0);
+          BoutReal nesheath = floor(Ne(r.ind, mesh->yend, jz), nesheath_floor);
 
           // Temperature at the sheath entrance
           BoutReal tesheath = floor(Te(r.ind, mesh->yend, jz), 0.0);
@@ -2973,7 +2974,8 @@ int Hermes::rhs(BoutReal t) {
     switch (sheath_model) {
     case 0:
     case 2:
-    case 3: {
+    case 3:
+    case 4: {
       for (RangeIterator r = mesh->iterateBndryUpperY(); !r.isDone(); r++) {
         for (int jz = 0; jz < mesh->LocalNz; jz++) {
           // Temperature and density at the sheath entrance
@@ -2985,7 +2987,7 @@ int Hermes::rhs(BoutReal t) {
               0.0);
           BoutReal nesheath = floor(
               0.5 * (Ne_FA(r.ind, mesh->yend, jz) + Ne_FA(r.ind, mesh->yend + 1, jz)),
-              0.0);
+              nesheath_floor);
 
           // Sound speed (normalised units)
           BoutReal Cs = sqrt(tesheath + tisheath);
@@ -3019,7 +3021,8 @@ int Hermes::rhs(BoutReal t) {
     switch (sheath_model) {
     case 0:
     case 2:
-    case 3: {
+    case 3:
+    case 4: {
       for (RangeIterator r = mesh->iterateBndryLowerY(); !r.isDone(); r++) {
         for (int jz = 0; jz < mesh->LocalNz; jz++) {
           // Temperature and density at the sheath entrance
@@ -3031,7 +3034,7 @@ int Hermes::rhs(BoutReal t) {
                                     0.0);
           BoutReal nesheath = floor(0.5 * (Ne_FA(r.ind, mesh->ystart, jz) +
                                            Ne_FA(r.ind, mesh->ystart - 1, jz)),
-                                    0.0);
+                                    nesheath_floor);
 
           // Sound speed (normalised units)
           BoutReal Cs = sqrt(tesheath + tisheath);
@@ -3290,7 +3293,8 @@ int Hermes::rhs(BoutReal t) {
     switch (sheath_model) {
     case 0:
     case 2:
-    case 3: {
+    case 3:
+    case 4: {
       for (RangeIterator r = mesh->iterateBndryUpperY(); !r.isDone(); r++) {
         for (int jz = 0; jz < mesh->LocalNz; jz++) {
           // Temperature and density at the sheath entrance
@@ -3302,7 +3306,7 @@ int Hermes::rhs(BoutReal t) {
               0.0);
           BoutReal nesheath = floor(
               0.5 * (Ne_FA(r.ind, mesh->yend, jz) + Ne_FA(r.ind, mesh->yend + 1, jz)),
-              0.0);
+              nesheath_floor);
 
           // Sound speed (normalised units)
           BoutReal Cs = sqrt(tesheath + tisheath);
@@ -3336,7 +3340,8 @@ int Hermes::rhs(BoutReal t) {
     switch (sheath_model) {
     case 0:
     case 2:
-    case 3: {
+    case 3:
+    case 4: {
       for (RangeIterator r = mesh->iterateBndryLowerY(); !r.isDone(); r++) {
         for (int jz = 0; jz < mesh->LocalNz; jz++) {
           // Temperature and density at the sheath entrance
@@ -3348,7 +3353,7 @@ int Hermes::rhs(BoutReal t) {
                                     0.0);
           BoutReal nesheath = floor(0.5 * (Ne_FA(r.ind, mesh->ystart, jz) +
                                            Ne_FA(r.ind, mesh->ystart - 1, jz)),
-                                    0.0);
+                                    nesheath_floor);
 
           // Sound speed (normalised units)
           BoutReal Cs = sqrt(tesheath + tisheath);

@@ -48,6 +48,9 @@ private:
   // Equilibrium current
   Field2D Jpar0;
 
+  // floor values
+  BoutReal nesheath_floor;
+
   // Diagnosing sim variables
   Field2D NeErr;
   Field2D NeErr_inp;
