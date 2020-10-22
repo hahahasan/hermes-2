@@ -476,21 +476,14 @@ int Hermes::init(bool restarting) {
   // Get switches from each variable section
   auto& optne = opt["Ne"];
   NeSource = optne["source"].doc("Source term in ddt(Ne)").withDefault(Field3D{0.0});
-  NeSource /= Omega_ci;
-  Sn = DC(NeSource);
-
   // Inflowing density carries momentum
   OPTION(optne, density_inflow, false);
 
   auto& optpe = opt["Pe"];
   PeSource = optpe["source"].withDefault(Field3D{0.0});
-  PeSource /= Omega_ci;
-  Spe = DC(PeSource);
 
   auto& optpi = opt["Pi"];
   PiSource = optpi["source"].withDefault(Field3D{0.0});
-  PiSource /= Omega_ci;
-  Spi = DC(PiSource);
 
   if (slab_radial_buffers || radial_buffers) {
     // Need to set the sources in the radial buffer regions to zero
@@ -513,14 +506,21 @@ int Hermes::init(bool restarting) {
       for (int i = imin; i <= imax; i++) {
         for (int j = mesh->ystart; j <= mesh->yend; ++j) {
           for (int k = 0; k < ncz; ++k) {
-            NeSource(i, j, k) = 0;
-            PiSource(i, j, k) = 0;
-            PeSource(i, j ,k) = 0;
+            NeSource(i, j, k) = 0.0;
+            PiSource(i, j, k) = 0.0;
+            PeSource(i, j ,k) = 0.0;
           }
         }
       }
     }
   }
+
+  NeSource /= Omega_ci;
+  Sn = DC(NeSource);
+  PeSource /= Omega_ci;
+  Spe = DC(PeSource);
+  PiSource /= Omega_ci;
+  Spi = DC(PiSource);
 
   OPTION(optsc, core_sources, false);
   if (core_sources) {
@@ -530,7 +530,7 @@ int Hermes::init(bool restarting) {
         for (int y = mesh->ystart; y <= mesh->yend; y++) {
           Sn(x, y) = 0.0;
           Spe(x, y) = 0.0;
-	  Spi(x, y) = 0.0;
+	        Spi(x, y) = 0.0;
         }
       }
     }
@@ -1493,8 +1493,8 @@ int Hermes::rhs(BoutReal t) {
           // Zero-gradient density
           BoutReal nesheath = 0.5 * (3. * Ne(r.ind, mesh->ystart, jz) -
                                      Ne(r.ind, mesh->ystart + 1, jz));
-          if (nesheath < 1e-5)
-            nesheath = 1e-5;
+          if (nesheath < nesheath_floor)
+            nesheath = nesheath_floor;
 
           // Temperature at the sheath entrance
           BoutReal tesheath = floor(Te(r.ind, mesh->ystart, jz), 0.0);
@@ -1900,8 +1900,8 @@ int Hermes::rhs(BoutReal t) {
           // Zero-gradient density
           BoutReal nesheath = 0.5 * (3. * Ne(r.ind, mesh->yend, jz) -
                                      Ne(r.ind, mesh->yend - 1, jz));
-          if (nesheath < 1e-5)
-            nesheath = 1e-5;
+          if (nesheath < nesheath_floor)
+            nesheath = nesheath_floor;
 
           // Temperature at the sheath entrance
           BoutReal tesheath = floor(Te(r.ind, mesh->yend, jz), 0.0);
