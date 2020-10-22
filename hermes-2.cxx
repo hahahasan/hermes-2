@@ -509,6 +509,7 @@ int Hermes::init(bool restarting) {
             NeSource(i, j, k) = 0.0;
             PiSource(i, j, k) = 0.0;
             PeSource(i, j ,k) = 0.0;
+            output.write("000 PiSource(3,3,3) = %e\n", PiSource(3,3,3));
           }
         }
       }
@@ -3506,11 +3507,13 @@ int Hermes::rhs(BoutReal t) {
 
           for (int k = 0; k < ncz; ++k) {
             // Relax towards constant value on flux surface
+            output.write("11 ddt Pe = %e\n", ddt(Pe)(3,4,2));
             ddt(Pe)(i, j, k) -= D * (Pe(i, j, k) - PeDC(i, j));
             ddt(Pi)(i, j, k) -= D * (Pi(i, j, k) - PiDC(i, j));
             ddt(Ne)(i, j, k) -= D * (Ne(i, j, k) - NeDC(i, j));
             ddt(Vort)(i, j, k) -= D * (Vort(i, j, k) - VortDC(i, j));
             ddt(NVi)(i, j, k) -= D * NVi(i, j, k);
+            output.write("22 ddt Pe = %e\n", ddt(Pe)(3,4,2));
             
             // Radial fluxes
             BoutReal f = D * (Ne(i + 1, j, k) - Ne(i, j, k));
@@ -3520,6 +3523,7 @@ int Hermes::rhs(BoutReal t) {
             f = D * (Pe(i + 1, j, k) - Pe(i, j, k));
             ddt(Pe)(i, j, k) += f * x_factor;
             ddt(Pe)(i + 1, j, k) -= f * xp_factor;
+            output.write("33 ddt Pe = %e\n", ddt(Pe)(3,4,2));
 
             f = D * (Pi(i + 1, j, k) - Pi(i, j, k));
             ddt(Pi)(i, j, k) += f * x_factor;
