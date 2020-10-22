@@ -503,11 +503,11 @@ int Hermes::init(bool restarting) {
 
       int ncz = mesh->LocalNz;
 
-      output.write("slab000 imin = %e \n", imin);
-      output.write("slab000 imax = %e \n", imax);
-      output.write("slab000 jmin = %e \n", mesh->ystart);
-      output.write("slab000 jmax = %e \n", mesh->yend);
-      output.write("slab000 ncz = %e \n", ncz);
+      output.write("slab000 imin = %d \n", imin);
+      output.write("slab000 imax = %d \n", imax);
+      output.write("slab000 jmin = %d \n", mesh->ystart);
+      output.write("slab000 jmax = %d \n", mesh->yend);
+      output.write("slab000 ncz = %d \n", ncz);
 
       for (int i = imin; i <= imax; i++) {
         for (int j = mesh->ystart; j <= mesh->yend; ++j) {
@@ -515,7 +515,7 @@ int Hermes::init(bool restarting) {
             NeSource(i, j, k) = 0.0;
             PiSource(i, j, k) = 0.0;
             PeSource(i, j ,k) = 0.0;
-            output.write("000 PiSource(%e,%e,%e) = %e\n", i,j,k, PiSource(i,j,k));
+            output.write("000 PiSource(%d,%d,%d) = %e\n", i,j,k, PiSource(i,j,k));
           }
         }
       }
