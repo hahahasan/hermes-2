@@ -3632,9 +3632,9 @@ int Hermes::rhs(BoutReal t) {
 
           for (int k = 0; k < ncz; ++k) {
             // Relax towards constant value on flux surface
-            output.write("00 ddt Pe = %e\n", ddt(Pe)(3,4,2));
+            // output.write("00 ddt Pe = %e\n", ddt(Pe)(3,4,2));
             ddt(Pe)(i, j, k) -= D * (Pe(i, j, k) - PeDC(i, j));
-            output.write("11 ddt Pe = %e\n", ddt(Pe)(3,4,2));
+            // output.write("11 ddt Pe = %e\n", ddt(Pe)(3,4,2));
             ddt(Pi)(i, j, k) -= D * (Pi(i, j, k) - PiDC(i, j));
             ddt(Ne)(i, j, k) -= D * (Ne(i, j, k) - NeDC(i, j));
             ddt(Vort)(i, j, k) -= D * (Vort(i, j, k) - VortDC(i, j));
@@ -3648,7 +3648,7 @@ int Hermes::rhs(BoutReal t) {
             f = D * (Pe(i + 1, j, k) - Pe(i, j, k));
             ddt(Pe)(i, j, k) += f * x_factor;
             ddt(Pe)(i + 1, j, k) -= f * xp_factor;
-            output.write("22 ddt Pe = %e\n", ddt(Pe)(3,4,2));
+            // output.write("22 ddt Pe = %e\n", ddt(Pe)(3,4,2));
 
             f = D * (Pi(i + 1, j, k) - Pi(i, j, k));
             ddt(Pi)(i, j, k) += f * x_factor;
