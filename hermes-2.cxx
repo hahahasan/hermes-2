@@ -503,19 +503,13 @@ int Hermes::init(bool restarting) {
 
       int ncz = mesh->LocalNz;
 
-      output.write("slab000 imin = %d \n", imin);
-      output.write("slab000 imax = %d \n", imax);
-      output.write("slab000 jmin = %d \n", mesh->ystart);
-      output.write("slab000 jmax = %d \n", mesh->yend);
-      output.write("slab000 ncz = %d \n", ncz);
-
       for (int i = imin; i <= imax; i++) {
         for (int j = mesh->ystart; j <= mesh->yend; ++j) {
           for (int k = 0; k < ncz; ++k) {
             NeSource(i, j, k) = 0.0;
             PiSource(i, j, k) = 0.0;
             PeSource(i, j ,k) = 0.0;
-            output.write("000 PiSource(%d,%d,%d) = %e\n", i,j,k, PiSource(i,j,k));
+            // output.write("000 PiSource(%d,%d,%d) = %e\n", i,j,k, PiSource(i,j,k));
           }
         }
       }
@@ -609,6 +603,8 @@ int Hermes::init(bool restarting) {
       SAVE_REPEAT(Vi);
     }
   }
+
+  OPTION(optsc, sources_positive, true);
 
   OPTION(optsc, adapt_source_p, false);
   if (adapt_source_p) {
@@ -2555,7 +2551,6 @@ int Hermes::rhs(BoutReal t) {
       ddt(Sn) = 0.0;
       for (int x = mesh->xstart; x <= mesh->xend; x++) {
         if (!mesh->periodicY(x))
-	        // puts ("#11111 non periodic Y");
           continue; // Not periodic, so skip
 
         for (int y = mesh->ystart; y <= mesh->yend; y++) {
@@ -2565,7 +2560,7 @@ int Hermes::rhs(BoutReal t) {
             output.write("Normalisation Sn=%e, ddt(Sn)=%e\n", Sn(x,y), ddt(Sn)(x,y));
 	          output.write("Normalisation NeTarget=%e, NeErr_inp=%e, NeErr=%e\n", NeTarget(x,y), NeErr_inp(x,y), NeErr(x,y));
           }
-          if (Sn(x, y) < 0.0) {
+          if (Sn(x, y) < 0.0 && sources_positive) {
             Sn(x, y) = 0.0;
             if (ddt(Sn)(x, y) < 0.0)
               ddt(Sn)(x, y) = 0.0;
@@ -3126,7 +3121,7 @@ int Hermes::rhs(BoutReal t) {
           Spe(x, y) -= source_p * PeErr(x, y);
           ddt(Spe)(x, y) = -source_i * PeErr(x, y);
 
-          if (Spe(x, y) < 0.0) {
+          if (Spe(x, y) < 0.0 && sources_positive) {
             Spe(x, y) = 0.0;
             if (ddt(Spe)(x, y) < 0.0)
               ddt(Spe)(x, y) = 0.0;
@@ -3407,7 +3402,7 @@ int Hermes::rhs(BoutReal t) {
           Spi(x, y) -= source_p * PiErr(x, y);
           ddt(Spi)(x, y) = -source_i * PiErr(x, y);
 
-          if (Spi(x, y) < 0.0) {
+          if (Spi(x, y) < 0.0 && sources_positive) {
             Spi(x, y) = 0.0;
             if (ddt(Spi)(x, y) < 0.0)
               ddt(Spi)(x, y) = 0.0;
@@ -3643,7 +3638,7 @@ int Hermes::rhs(BoutReal t) {
             ddt(Pi)(i, j, k) -= D * (Pi(i, j, k) - PiDC(i, j));
             ddt(Ne)(i, j, k) -= D * (Ne(i, j, k) - NeDC(i, j));
             ddt(Vort)(i, j, k) -= D * (Vort(i, j, k) - VortDC(i, j));
-            ddt(NVi)(i, j, k) -= D * NVi(i, j, k);
+            // ddt(NVi)(i, j, k) -= D * NVi(i, j, k);
             
             // Radial fluxes
             BoutReal f = D * (Ne(i + 1, j, k) - Ne(i, j, k));
@@ -3705,7 +3700,7 @@ int Hermes::rhs(BoutReal t) {
             ddt(Pi)(i, j, k) -= D * (Pi(i, j, k) - PiDC(i, j));
             ddt(Ne)(i, j, k) -= D * (Ne(i, j, k) - NeDC(i, j));
             ddt(Vort)(i, j, k) -= D * (Vort(i, j, k) - VortDC(i, j));
-            ddt(NVi)(i, j, k) -= D * NVi(i, j, k);
+            // ddt(NVi)(i, j, k) -= D * NVi(i, j, k);
             // ddt(Vort)(i,j,k) -= D*Vort(i,j,k);
 
             // Radial fluxes

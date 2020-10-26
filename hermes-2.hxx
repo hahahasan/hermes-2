@@ -202,6 +202,7 @@ private:
   BoutReal ramp_timescale; // Length of time for the initial ramp
   Field2D NeTarget, PeTarget, PiTarget; // For adaptive sources
   
+  bool sources_positive; // Sources can go negative to act like sinks
   bool adapt_source_p; // Use a PI controller to feedback profiles
   bool adapt_source_n;
   bool core_sources; // Sources only in the core
