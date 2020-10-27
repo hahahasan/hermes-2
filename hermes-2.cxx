@@ -3466,7 +3466,7 @@ int Hermes::rhs(BoutReal t) {
   if (radial_buffers && !slab_radial_buffers) {
     /// Radial buffer regions for tokamak geometry - inner and outer boundaries treated differently
 
-    output.write(" rad_buff zone 1 - tokamak \n");
+    // output.write(" rad_buff zone 1 - tokamak \n");
 
     // Calculate flux sZ averages
     Field2D PeDC = averageY(DC(Pe));
@@ -3588,7 +3588,7 @@ int Hermes::rhs(BoutReal t) {
 
   if (slab_radial_buffers && !radial_buffers) {
     /// radial buffer regions for slab geometry sims - same on both inner and outer boundaries
-    output.write(" rad_buff zone 2 - slab \n");
+    // output.write(" rad_buff zone 2 - slab \n");
 
     // Calculate flux sZ averages
     Field2D PeDC = DC(Pe);
