@@ -363,7 +363,8 @@ int Hermes::init(bool restarting) {
   OPTION(optsc, sheath_yup, true);       // Apply sheath at yup?
   OPTION(optsc, sheath_ydown, true);     // Apply sheath at ydown?
   OPTION(optsc, test_boundaries, false); // Test boundary conditions
-  OPTION(optsc, nesheath_floor, 1e-5);   // Ne sheath lower limit
+  
+  nesheath_floor = optsc["nesheath_floor"].doc("Ne sheath lower limit").withDefault(1e-5);
 
   // Fix profiles in SOL
   OPTION(optsc, sol_fix_profiles, false);
@@ -603,7 +604,12 @@ int Hermes::init(bool restarting) {
     }
   }
 
-  OPTION(optsc, adapt_source_p, false);
+  bool adapt_source = optsc["adapt_source"]
+                        .doc("Vary sources in time to match core profiles. This sets the default for adapt_source_p and adapt_source_n").withDefault(false);
+  adapt_source_p = optsc["adapt_source_p"]
+                        .doc("Vary pressure source in time to match core profiles").withDefault(adapt_source);
+  adapt_source_n = optsc["adapt_source_n"]
+                        .doc("Vary density source in time to match core profiles").withDefault(adapt_source);
   if (adapt_source_p) {
     // Adaptive pressure sources to match profiles
 
@@ -620,7 +626,6 @@ int Hermes::init(bool restarting) {
     SAVE_ONCE(Spe, Spi);
   }
   
-  OPTION(optsc, adapt_source_n, false);
   if (adapt_source_n) {
     // Adaptive density sources to match profile
     OPTION(optsc, source_p, 1e-2);
@@ -1136,7 +1141,6 @@ int Hermes::rhs(BoutReal t) {
           } else {
             // Use older Laplacian solver
             // phiSolver->setCoefC(1./SQ(coord->Bxy)); // Set when initialised
-            // phi = phiSolver->solve(Vort * SQ(coord->Bxy), (sheathmult + log(sqrt(Telim / (Telim + Tilim)))) * Telim );
             phi = phiSolver->solve(Vort * SQ(coord->Bxy), DC((sheathmult + log(sqrt(Telim / (Telim + Tilim)))) * Telim ));
           }
         }
@@ -2059,7 +2063,7 @@ int Hermes::rhs(BoutReal t) {
 
             // Here zero-gradient Te, heat flux applied later
             // This is so that heat diffusion doesn't remove (or add) additional heat
-            Te(r.ind, jy, jz) = tesheath;
+            Te(r.ind, jy, jz) = Te(r.ind, mesh->yend, jz);
             Ti(r.ind, jy, jz) = Ti(r.ind, mesh->yend, jz);
 
             // Dirichlet conditions to set flows
@@ -3010,6 +3014,9 @@ int Hermes::rhs(BoutReal t) {
       }
       break;
     }
+    default: {
+      throw BoutException("sheath_model %d not implemented", sheath_model);
+    }
     }
     ddt(Pe) += fromFieldAligned(sheath_dpe);
   }
@@ -3057,6 +3064,9 @@ int Hermes::rhs(BoutReal t) {
         }
       }
       break;
+    }
+    default: {
+      throw BoutException("sheath_model %d not implemented", sheath_model);
     }
     }
 
@@ -3329,6 +3339,9 @@ int Hermes::rhs(BoutReal t) {
       }
       break;
     }
+    default: {
+      throw BoutException("sheath_model %d not implemented", sheath_model);
+    }
     }
     ddt(Pi) += fromFieldAligned(sheath_dpi);
   }
@@ -3375,6 +3388,9 @@ int Hermes::rhs(BoutReal t) {
         }
       }
       break;
+    }
+    default: {
+      throw BoutException("sheath_model %d not implemented", sheath_model);
     }
     }
 

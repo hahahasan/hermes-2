@@ -48,13 +48,12 @@ private:
   // Equilibrium current
   Field2D Jpar0;
 
-  // floor values
-  BoutReal nesheath_floor;
-
   // Diagnosing sim variables
   Field2D NeErr;
   Field2D NeErr_inp;
   
+  BoutReal nesheath_floor; // Density floor used in sheath boundary conditions
+
   // Evolving variables
   Field3D Ne;         // Electron density
   Field3D Pe, Pi;     // Electron and Ion pressures
@@ -202,8 +201,8 @@ private:
   BoutReal ramp_timescale; // Length of time for the initial ramp
   Field2D NeTarget, PeTarget, PiTarget; // For adaptive sources
   
-  bool adapt_source_p; // Use a PI controller to feedback profiles
-  bool adapt_source_n;
+  bool adapt_source_p; // Use a PI controller to feedback pressure profiles
+  bool adapt_source_n; // Use a PI controller to feedback density profiles
   bool core_sources; // Sources only in the core
   bool energy_source; // Add the same amount of energy to each particle
   BoutReal source_p, source_i;  // Proportional-Integral controller
