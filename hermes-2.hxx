@@ -121,6 +121,7 @@ private:
   bool thermal_force; // Force due to temperature gradients
   bool electron_viscosity; // Electron parallel viscosity
   bool ion_viscosity;   // Ion viscosity
+  bool ion_viscosity_par; // Parallel part of ion viscosity
   bool electron_neutral;   // Include electron-neutral collisions in resistivity
   bool ion_neutral;        // Include ion-neutral collisions in ion collision time
   bool poloidal_flows;  // Include y derivatives in diamagnetic and ExB drifts
@@ -155,6 +156,10 @@ private:
   int radial_inner_width; // Number of points in the inner radial buffer
   int radial_outer_width; // Number of points in the outer radial buffer
   BoutReal radial_buffer_D; // Diffusion in buffer region
+  bool radial_inner_averagey; // Average Ne, Pe, Pi fields in Y in inner radial buffer
+  bool radial_inner_averagey_vort; // Average vorticity in Y in inner buffer
+  bool radial_inner_averagey_nvi; // Average NVi in Y in inner buffer
+  bool radial_inner_zero_nvi; // Damp NVi towards zero in inner buffer
 
   BoutReal resistivity_boundary; // Value of nu in boundary layer
   int resistivity_boundary_width; // Width of radial boundary
