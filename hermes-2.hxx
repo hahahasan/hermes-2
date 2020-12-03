@@ -112,7 +112,10 @@ private:
   BoutReal ramp_j_diamag; // coefficient to ramp up the drive for current terms in vorticity equation
   FieldGeneratorPtr  ramp_j_diamag_generator;
   bool j_diamag;    // Diamagnetic current: Vort <-> Pe
+  FieldGeneratorPtr  j_diamag_scale_generator; // Time-varying diamagnetic current scaling
+  BoutReal j_diamag_scale;    // Diamagnetic current scaling factor.
   bool j_par;       // Parallel current:    Vort <-> Psi
+  bool j_pol_terms; // Extra terms in Vort
   bool parallel_flow;
   bool parallel_flow_p_term; // Vi advection terms in Pe, Pi
   bool pe_par;      // Parallel pressure gradient: Pe <-> Psi
@@ -142,8 +145,6 @@ private:
   bool ion_velocity;  // Include Vi terms
 
   bool phi3d;         // Use a 3D solver for phi
-  
-  bool staggered;     // Use staggered differencing along B
 
   bool boussinesq;     // Use a fixed density (Nnorm) in the vorticity equation
 
@@ -181,7 +182,7 @@ private:
   // Fix density in SOL
   bool sol_fix_profiles;
   std::shared_ptr<FieldGenerator> sol_ne, sol_te; // Generating functions
-  
+
   // Output switches for additional information
   bool verbose;    // Outputs additional fields, mainly for debugging
   bool output_ddt; // Output time derivatives
@@ -199,6 +200,7 @@ private:
   BoutReal floor_num_cs; // Apply a floor to the numerical sound speed
   bool vepsi_dissipation; // Dissipation term in VePsi equation
   bool vort_dissipation; // Dissipation term in Vorticity equation
+  bool phi_dissipation; // Dissipation term in Vorticity equation, depending on phi
   
   // Sources and profiles
   
@@ -208,6 +210,7 @@ private:
   
   bool adapt_source_p; // Use a PI controller to feedback pressure profiles
   bool adapt_source_n; // Use a PI controller to feedback density profiles
+  bool sources_positive; // Ensure sources > 0
   bool core_sources; // Sources only in the core
   bool energy_source; // Add the same amount of energy to each particle
   BoutReal source_p, source_i;  // Proportional-Integral controller
