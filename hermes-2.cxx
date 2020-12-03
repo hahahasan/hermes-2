@@ -263,11 +263,19 @@ int Hermes::init(bool restarting) {
   j_diamag = optsc["j_diamag"]
                  .doc("Diamagnetic current: Vort <-> Pe")
                  .withDefault<bool>(true);
+ 
+  if (optsc["j_diamag_scale"].isSet()) { 
+    j_diamag_scale_generator = FieldFactory::get()->parse("hermes:j_diamag_scale", Options::getRoot());
+    SAVE_REPEAT(j_diamag_scale);
+  } else {
+    j_diamag_scale_generator = FieldFactory::get()->parse("1");
+  }
   
   j_par = optsc["j_par"]
               .doc("Parallel current:    Vort <-> Psi")
               .withDefault<bool>(true);
-  
+
+  OPTION(optsc, j_pol_terms, false);
   OPTION(optsc, parallel_flow, true);
   OPTION(optsc, parallel_flow_p_term, parallel_flow);
   OPTION(optsc, pe_par, true);
@@ -318,8 +326,6 @@ int Hermes::init(bool restarting) {
                      .doc("A fixed ion-neutral collision rate, normalised to ion cyclotron frequency.")
                      .withDefault(0.0);
 
-  OPTION(optsc, staggered, false);
-
   OPTION(optsc, boussinesq, false);
 
   OPTION(optsc, sinks, false);
@@ -354,6 +360,9 @@ int Hermes::init(bool restarting) {
   OPTION(optsc, floor_num_cs, -1.0);
   OPTION(optsc, vepsi_dissipation, false);
   OPTION(optsc, vort_dissipation, false);
+  phi_dissipation = optsc["phi_dissipation"]
+    .doc("Add a dissipation term to vorticity, depending on reconstruction of potential?")
+    .withDefault<bool>(false);
 
   OPTION(optsc, ne_hyper_z, -1.0);
   OPTION(optsc, pe_hyper_z, -1.0);
@@ -639,6 +648,8 @@ int Hermes::init(bool restarting) {
                         .doc("Vary pressure source in time to match core profiles").withDefault(adapt_source);
   adapt_source_n = optsc["adapt_source_n"]
                         .doc("Vary density source in time to match core profiles").withDefault(adapt_source);
+  sources_positive = optsc["sources_positive"].doc("Ensure that sources are always positive").withDefault<bool>(true);
+
   if (adapt_source_p) {
     // Adaptive pressure sources to match profiles
 
@@ -955,6 +966,11 @@ int Hermes::init(bool restarting) {
 
       if (!restarting) {
         // Start by setting to the sheath current = 0 boundary value
+
+        Field3D Nelim = floor(Ne, 1e-5);
+        Telim = floor(Pe / Nelim, 0.1 / Tnorm);
+        Tilim = floor(Pi / Nelim, 0.1 / Tnorm);
+
         phi.setBoundaryTo(DC(
             (log(0.5 * sqrt(mi_me / PI)) + log(sqrt(Telim / (Telim + Tilim)))) * Telim));
       }
@@ -997,8 +1013,10 @@ int Hermes::init(bool restarting) {
 
     SAVE_REPEAT(tau_e, tau_i);
 
-    SAVE_REPEAT(kappa_epar); // Parallel electron heat conductivity
-    SAVE_REPEAT(kappa_ipar); // Parallel ion heat conductivity
+    if (thermal_conduction || sinks) {
+      SAVE_REPEAT(kappa_epar); // Parallel electron heat conductivity
+      SAVE_REPEAT(kappa_ipar); // Parallel ion heat conductivity
+    }
 
     if (resistivity) {
       SAVE_REPEAT(nu); // Parallel resistivity
@@ -1033,10 +1051,9 @@ int Hermes::rhs(BoutReal t) {
     sheath_model = 0;
   }
 
-  if (ramp_j_diamag < 1.0) {
-    ramp_j_diamag = ramp_j_diamag_generator->generate(0, 0, 0, t);
-  }
-  
+  // Factor scaling the diamagnetic current
+  j_diamag_scale = j_diamag_scale_generator->generate(0, 0, 0, t);
+
   // Communicate evolving variables
   // Note: Parallel slices are not calculated because parallel derivatives
   // are calculated using field aligned quantities
@@ -2604,14 +2621,15 @@ int Hermes::rhs(BoutReal t) {
         0.49 * (qipar / Pilim) *
             (2.27 * Grad_par(log(Tilim)) - Grad_par(log(Pilim))) +
         0.75 * (0.2 * SQ(qipar) - 0.085 * qisq) / (Pilim * Tilim);
-    
+
     // Parallel part
     Pi_cipar = -0.96 * Pi * tau_i *
                (2. * Grad_par(Vi) + Vi * Grad_par(log(coord->Bxy)));
     // Could also be written as:
     // Pi_cipar = -
     // 0.96*Pi*tau_i*2.*Grad_par(sqrt(coord->Bxy)*Vi)/sqrt(coord->Bxy);
-    
+
+
     if (mesh->firstX()) {
       // First cells in X subject to boundary effects.
       for(int i=mesh->xstart; (i <= mesh->xend) && (i < 4); i++) {
@@ -2707,7 +2725,7 @@ int Hermes::rhs(BoutReal t) {
   if (j_diamag) {
     // Diamagnetic drift, formulated as a magnetic drift
     // i.e Grad-B + curvature drift
-    ddt(Ne) -= FV::Div_f_v(Ne, -Telim * Curlb_B, ne_bndry_flux);
+    ddt(Ne) -= j_diamag_scale * FV::Div_f_v(Ne, -Telim * Curlb_B, ne_bndry_flux);
   }
 
   if (ramp_mesh && (t < ramp_timescale)) {
@@ -2750,7 +2768,8 @@ int Hermes::rhs(BoutReal t) {
             output.write("Normalisation Sn=%e, ddt(Sn)=%e\n", Sn(x,y), ddt(Sn)(x,y));
 	          output.write("Normalisation NeTarget=%e, NeErr_inp=%e, NeErr=%e\n", NeTarget(x,y), NeErr_inp(x,y), NeErr(x,y));
           }
-          if (Sn(x, y) < 0.0) {
+
+          if (sources_positive && Sn(x, y) < 0.0) {
             Sn(x, y) = 0.0;
             if (ddt(Sn)(x, y) < 0.0)
               ddt(Sn)(x, y) = 0.0;
@@ -2813,8 +2832,7 @@ int Hermes::rhs(BoutReal t) {
 
       // Note: This term is central differencing so that it balances
       // the corresponding compression term in the pressure equation
-      
-      ddt(Vort) += ramp_j_diamag * Div((Pi + Pe) * Curlb_B);
+      ddt(Vort) += j_diamag_scale * Div((Pi + Pe) * Curlb_B);
     }
 
     // Advection of vorticity by ExB
@@ -2835,6 +2853,11 @@ int Hermes::rhs(BoutReal t) {
       mesh->communicate(vEdotGradPi, DelpPhi_2B2);
 
       ddt(Vort) -= FV::Div_a_Laplace_perp(0.5 / SQ(coord->Bxy), vEdotGradPi);
+
+      if (j_pol_terms){
+	ddt(Vort) -= Div_n_bxGrad_f_B_XPPM(DelpPhi_2B2, phi + Pi, vort_bndry_flux,
+					   poloidal_flows);
+      }
 
     } else {
       // When the Boussinesq approximation is not made,
@@ -2910,6 +2933,12 @@ int Hermes::rhs(BoutReal t) {
       }
 
       ddt(Vort) -= FV::Div_par(Vort, 0.0, max_speed);
+    }
+
+    if (phi_dissipation) {
+      // Adds dissipation term like in other equations, but depending on gradient of potential
+      // Note: Doesn't seem to need faster than sound speed
+      ddt(Vort) -= FV::Div_par(-phi, 0.0, sound_speed);
     }
   }
 
@@ -3021,8 +3050,9 @@ int Hermes::rhs(BoutReal t) {
 
     if (j_diamag) {
       // Magnetic drift
-      ddt(NVi) -= FV::Div_f_v(NVi, Tilim * Curlb_B,
-                              ne_bndry_flux); // Grad-B, curvature drift
+      ddt(NVi) -= j_diamag_scale
+                  * FV::Div_f_v(NVi, Tilim * Curlb_B,
+                                ne_bndry_flux); // Grad-B, curvature drift
     }
 
     ddt(NVi) -= FV::Div_par_fvv(Ne, Vi, sound_speed, false); //FV::Div_par(NVi, Vi, sound_speed, false);
@@ -3128,11 +3158,12 @@ int Hermes::rhs(BoutReal t) {
 
   if (j_diamag) { // Diamagnetic flow
     // Magnetic drift (curvature) divergence.
-    ddt(Pe) -= ramp_j_diamag * (5. / 3) * FV::Div_f_v(Pe, -Telim * Curlb_B, pe_bndry_flux);
+    ddt(Pe) -=
+        j_diamag_scale * (5. / 3) * FV::Div_f_v(Pe, -Telim * Curlb_B, pe_bndry_flux);
 
     // This term energetically balances diamagnetic term
     // in the vorticity equation
-    ddt(Pe) -= ramp_j_diamag * (2. / 3) * Pe * (Curlb_B * Grad(phi));
+    ddt(Pe) -= j_diamag_scale * (2. / 3) * Pe * (Curlb_B * Grad(phi));
   }
 
   // Parallel heat conduction
@@ -3322,7 +3353,7 @@ int Hermes::rhs(BoutReal t) {
           Spe(x, y) -= source_p * PeErr(x, y);
           ddt(Spe)(x, y) = -source_i * PeErr(x, y);
 
-          if (Spe(x, y) < 0.0) {
+          if (sources_positive && Spe(x, y) < 0.0) {
             Spe(x, y) = 0.0;
             if (ddt(Spe)(x, y) < 0.0)
               ddt(Spe)(x, y) = 0.0;
@@ -3392,7 +3423,7 @@ int Hermes::rhs(BoutReal t) {
 
   if (j_diamag) { // Diamagnetic flow
     // Magnetic drift (curvature) divergence
-    ddt(Pi) -= ramp_j_diamag * (5. / 3) * FV::Div_f_v(Pi, Tilim * Curlb_B, pe_bndry_flux);
+    ddt(Pi) -= j_diamag_scale * (5. / 3) * FV::Div_f_v(Pi, Tilim * Curlb_B, pe_bndry_flux);
 
     // Compression of ExB flow
     // These terms energetically balances diamagnetic term
@@ -3403,12 +3434,10 @@ int Hermes::rhs(BoutReal t) {
   }
 
   if (j_par) {
-    if (boussinesq) {
       ddt(Pi) -= (2. / 3) * Jpar * Grad_parP(Pi);
     } else {
       ddt(Pi) -= (2. / 3) * Jpar * Grad_parP(Pi) / Nelim;
     }
-  }
 
   // Parallel heat conduction
   if (thermal_conduction) {
@@ -3609,7 +3638,7 @@ int Hermes::rhs(BoutReal t) {
           Spi(x, y) -= source_p * PiErr(x, y);
           ddt(Spi)(x, y) = -source_i * PiErr(x, y);
 
-          if (Spi(x, y) < 0.0) {
+          if (sources_positive && Spi(x, y) < 0.0) {
             Spi(x, y) = 0.0;
             if (ddt(Spi)(x, y) < 0.0)
               ddt(Spi)(x, y) = 0.0;
