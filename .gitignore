@@ -5,3 +5,4 @@ slab3d/
 hermes-2
 BOUT_commit
 *.a
+atomicpp.a
