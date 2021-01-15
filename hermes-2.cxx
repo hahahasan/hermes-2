@@ -210,7 +210,7 @@ BoutReal floor(const BoutReal &var, const BoutReal &f) {
   return var;
 }
 
-BoutReal ceil_real(const BoutReal &var, const BoutReal &f) {
+BoutReal ceil(const BoutReal &var, const BoutReal &f) {
   if (var > f)
     return f;
   return var;
@@ -218,7 +218,7 @@ BoutReal ceil_real(const BoutReal &var, const BoutReal &f) {
 
 /// Returns a copy of input \p var with all values greater than \p f replaced by
 /// \p f.
-const Field3D ceil_field3D(const Field3D &var, BoutReal f, REGION rgn = RGN_ALL) {
+const Field3D ceil(const Field3D &var, BoutReal f, REGION rgn = RGN_ALL) {
   checkData(var);
   Field3D result = copy(var);
 
@@ -499,25 +499,6 @@ int Hermes::init(bool restarting) {
     }
   }
 
-  // Get switches from each variable section
-  auto& optne = opt["Ne"];
-  NeSource = optne["source"].doc("Source term in ddt(Ne)").withDefault(Field3D{0.0});
-  NeSource /= Omega_ci;
-  Sn = DC(NeSource);
-
-  // Inflowing density carries momentum
-  OPTION(optne, density_inflow, false);
-
-  auto& optpe = opt["Pe"];
-  PeSource = optpe["source"].withDefault(Field3D{0.0});
-  PeSource /= Omega_ci;
-  Spe = DC(PeSource);
-
-  auto& optpi = opt["Pi"];
-  PiSource = optpi["source"].withDefault(Field3D{0.0});
-  PiSource /= Omega_ci;
-  Spi = DC(PiSource);
-
   if (radial_buffers) {
     // Need to set the sources in the radial buffer regions to zero
 
@@ -542,12 +523,54 @@ int Hermes::init(bool restarting) {
             NeSource(i, j, k) = 0.0;
             PiSource(i, j, k) = 0.0;
             PeSource(i, j ,k) = 0.0;
-            // output.write("000 PiSource(%d,%d,%d) = %e\n", i,j,k, PiSource(i,j,k));
+          }
+        }
+      }
+    }
+
+    int nguard = mesh->LocalNx - mesh->xend - 1;
+
+    if (mesh->GlobalNx - nguard - mesh->getGlobalXIndex(mesh->xend) <=
+        radial_outer_width) {
+
+      // Outer boundary
+      int imin =
+          mesh->GlobalNx - nguard - radial_outer_width - mesh->getGlobalXIndex(0);
+      if (imin < mesh->xstart) {
+        imin = mesh->xstart;
+      }
+      int ncz = mesh->LocalNz;
+
+      for (int i = imin; i <= mesh->xend; i++) {
+        for (int j = mesh->ystart; j <= mesh->yend; ++j) {
+          for (int k = 0; k < ncz; ++k) {
+            NeSource(i, j, k) = 0.0;
+            PiSource(i, j, k) = 0.0;
+            PeSource(i, j ,k) = 0.0;
           }
         }
       }
     }
   }
+
+  // Get switches from each variable section
+  auto& optne = opt["Ne"];
+  NeSource = optne["source"].doc("Source term in ddt(Ne)").withDefault(Field3D{0.0});
+  NeSource /= Omega_ci;
+  Sn = DC(NeSource);
+
+  // Inflowing density carries momentum
+  OPTION(optne, density_inflow, false);
+
+  auto& optpe = opt["Pe"];
+  PeSource = optpe["source"].withDefault(Field3D{0.0});
+  PeSource /= Omega_ci;
+  Spe = DC(PeSource);
+
+  auto& optpi = opt["Pi"];
+  PiSource = optpi["source"].withDefault(Field3D{0.0});
+  PiSource /= Omega_ci;
+  Spi = DC(PiSource);
   
   OPTION(optsc, core_sources, false);
   if (core_sources) {
@@ -557,7 +580,7 @@ int Hermes::init(bool restarting) {
         for (int y = mesh->ystart; y <= mesh->yend; y++) {
           Sn(x, y) = 0.0;
           Spe(x, y) = 0.0;
-	  Spi(x, y) = 0.0;
+	        Spi(x, y) = 0.0;
         }
       }
     }
@@ -2598,7 +2621,7 @@ int Hermes::rhs(BoutReal t) {
     Field3D qipar = -kappa_ipar * Grad_par(Tifree);
 
     // Limit the maximum value of tau_i
-    tau_i = ceil_field3D(tau_i, 1e4);
+    tau_i = ceil(tau_i, 1e4);
 
     // Square of total heat flux, parallel and perpendicular
     // The first Pi term cancels the parallel part of the second term
@@ -3219,7 +3242,7 @@ int Hermes::rhs(BoutReal t) {
           BoutReal nesheath = floor(
             0.5 * (Ne_FA(r.ind, mesh->ystart, jz) + Ne_FA(r.ind, mesh->ystart - 1, jz)),
             nesheath_floor);
-          BoutReal vesheath = ceil_real(
+          BoutReal vesheath = ceil(
               0.5 * (Ve_FA(r.ind, mesh->ystart, jz) + Ve_FA(r.ind, mesh->ystart - 1, jz)),
               0.0);
 
