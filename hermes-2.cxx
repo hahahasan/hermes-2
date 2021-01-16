@@ -210,7 +210,7 @@ BoutReal floor(const BoutReal &var, const BoutReal &f) {
   return var;
 }
 
-BoutReal ceil(const BoutReal &var, const BoutReal &f) {
+BoutReal ceil_real(const BoutReal &var, const BoutReal &f) {
   if (var > f)
     return f;
   return var;
@@ -218,7 +218,7 @@ BoutReal ceil(const BoutReal &var, const BoutReal &f) {
 
 /// Returns a copy of input \p var with all values greater than \p f replaced by
 /// \p f.
-const Field3D ceil(const Field3D &var, BoutReal f, REGION rgn = RGN_ALL) {
+const Field3D ceil_field3D(const Field3D &var, BoutReal f, REGION rgn = RGN_ALL) {
   checkData(var);
   Field3D result = copy(var);
 
@@ -2621,7 +2621,7 @@ int Hermes::rhs(BoutReal t) {
     Field3D qipar = -kappa_ipar * Grad_par(Tifree);
 
     // Limit the maximum value of tau_i
-    tau_i = ceil(tau_i, 1e4);
+    tau_i = ceil_field3D(tau_i, 1e4);
 
     // Square of total heat flux, parallel and perpendicular
     // The first Pi term cancels the parallel part of the second term
@@ -3242,7 +3242,7 @@ int Hermes::rhs(BoutReal t) {
           BoutReal nesheath = floor(
             0.5 * (Ne_FA(r.ind, mesh->ystart, jz) + Ne_FA(r.ind, mesh->ystart - 1, jz)),
             nesheath_floor);
-          BoutReal vesheath = ceil(
+          BoutReal vesheath = ceil_real(
               0.5 * (Ve_FA(r.ind, mesh->ystart, jz) + Ve_FA(r.ind, mesh->ystart - 1, jz)),
               0.0);
 
