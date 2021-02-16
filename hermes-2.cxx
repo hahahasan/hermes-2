@@ -3175,6 +3175,7 @@ int Hermes::rhs(BoutReal t) {
   Field3D Te_FA = toFieldAligned(Te);
   Field3D Ti_FA = toFieldAligned(Ti);
   Field3D Ve_FA = toFieldAligned(Ve);
+  Field3D Vi_FA = toFieldAligned(Vi);
 
   wall_power = 0.0; // Diagnostic output
   if (sheath_yup) {
@@ -3242,15 +3243,15 @@ int Hermes::rhs(BoutReal t) {
       for (RangeIterator r = mesh->iterateBndryLowerY(); !r.isDone(); r++) {
         for (int jz = 0; jz < mesh->LocalNz; jz++) {
           // Temperature and density at the sheath entrance
-          BoutReal tesheath = floor(0.5 * (Te_FA(r.ind, mesh->ystart, jz) +
-                                           Te_FA(r.ind, mesh->ystart - 1, jz)),
-                                    0.0);
+          BoutReal tesheath = floor(
+              0.5 * (Te_FA(r.ind, mesh->ystart, jz) + Te_FA(r.ind, mesh->ystart - 1, jz)),
+              0.0);
           // BoutReal tisheath = floor(0.5 * (Ti_FA(r.ind, mesh->ystart, jz) +
           //                                  Ti_FA(r.ind, mesh->ystart - 1, jz)),
           //                           0.0);
-          BoutReal nesheath = floor(0.5 * (Ne_FA(r.ind, mesh->ystart, jz) +
-                                           Ne_FA(r.ind, mesh->ystart - 1, jz)),
-                                    nesheath_floor);
+          BoutReal nesheath = floor(
+              0.5 * (Ne_FA(r.ind, mesh->ystart, jz) + Ne_FA(r.ind, mesh->ystart - 1, jz)),
+              nesheath_floor);
           BoutReal vesheath = ceil(
               0.5 * (Ve_FA(r.ind, mesh->ystart, jz) + Ve_FA(r.ind, mesh->ystart - 1, jz)),
               0.0);
@@ -3520,21 +3521,24 @@ int Hermes::rhs(BoutReal t) {
       for (RangeIterator r = mesh->iterateBndryUpperY(); !r.isDone(); r++) {
         for (int jz = 0; jz < mesh->LocalNz; jz++) {
           // Temperature and density at the sheath entrance
-          BoutReal tesheath = floor(
-              0.5 * (Te_FA(r.ind, mesh->yend, jz) + Te_FA(r.ind, mesh->yend + 1, jz)),
-              0.0);
+          // BoutReal tesheath = floor(
+          //     0.5 * (Te_FA(r.ind, mesh->yend, jz) + Te_FA(r.ind, mesh->yend + 1, jz)),
+          //     0.0);
           BoutReal tisheath = floor(
               0.5 * (Ti_FA(r.ind, mesh->yend, jz) + Ti_FA(r.ind, mesh->yend + 1, jz)),
               0.0);
           BoutReal nesheath = floor(
               0.5 * (Ne_FA(r.ind, mesh->yend, jz) + Ne_FA(r.ind, mesh->yend + 1, jz)),
               nesheath_floor);
+          BoutReal visheath = floor(
+              0.5 * (Vi_FA(r.ind, mesh->yend, jz) + Vi_FA(r.ind, mesh->yend + 1, jz)),
+              0.0);
 
           // Sound speed (normalised units)
-          BoutReal Cs = sqrt(tesheath + tisheath);
+          // BoutReal Cs = sqrt(tesheath + tisheath);
 
           // Heat flux
-          BoutReal q = (sheath_gamma_i - 1.5) * tisheath * nesheath * Cs;
+          BoutReal q = (sheath_gamma_i - 1.5) * tisheath * nesheath * visheath;
 
           // Multiply by cell area to get power
           BoutReal flux = q * (coord->J(r.ind, mesh->yend) +
@@ -3570,21 +3574,24 @@ int Hermes::rhs(BoutReal t) {
       for (RangeIterator r = mesh->iterateBndryLowerY(); !r.isDone(); r++) {
         for (int jz = 0; jz < mesh->LocalNz; jz++) {
           // Temperature and density at the sheath entrance
-          BoutReal tesheath = floor(0.5 * (Te_FA(r.ind, mesh->ystart, jz) +
-                                           Te_FA(r.ind, mesh->ystart - 1, jz)),
-                                    0.0);
+          // BoutReal tesheath = floor(0.5 * (Te_FA(r.ind, mesh->ystart, jz) +
+          //                                  Te_FA(r.ind, mesh->ystart - 1, jz)),
+          //                           0.0);
           BoutReal tisheath = floor(0.5 * (Ti_FA(r.ind, mesh->ystart, jz) +
                                            Ti_FA(r.ind, mesh->ystart - 1, jz)),
                                     0.0);
           BoutReal nesheath = floor(0.5 * (Ne_FA(r.ind, mesh->ystart, jz) +
                                            Ne_FA(r.ind, mesh->ystart - 1, jz)),
                                     nesheath_floor);
+          BoutReal visheath = ceil(
+              0.5 * (Vi_FA(r.ind, mesh->yend, jz) + Vi_FA(r.ind, mesh->yend + 1, jz)),
+              0.0);
 
           // Sound speed (normalised units)
-          BoutReal Cs = sqrt(tesheath + tisheath);
+          // BoutReal Cs = sqrt(tesheath + tisheath);
 
           // Heat flux (positive)
-          BoutReal q = (sheath_gamma_i - 1.5) * tisheath * nesheath * Cs;
+          BoutReal q = (sheath_gamma_i - 1.5) * tisheath * nesheath * visheath;
 
           // Multiply by cell area to get power
           BoutReal flux = q * (coord->J(r.ind, mesh->ystart) +
